@@ -1,0 +1,12 @@
+citHeader("To cite 'igraph' in publications use:")
+citEntry(entry="article",
+	 title="Expression cartography of human tissues using self organizing maps.",
+         author=personList(as.person("Henry Wirth"),
+			   as.person("Markus Loeffler"),
+			   as.person("Martin von Bergen"),
+			   as.person("Hans Binder")),
+	 journal="BMC Bioinformatics",
+	year="2011",
+	textVersion=paste("Wirth H, Loeffler M, vBergen M, Binder H: ",
+	                           "Expression cartography of human tissues using self organizing maps. ",
+	                           "BMC Bioinformatics 2011. ", sep=""))

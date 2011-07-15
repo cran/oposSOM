@@ -2,7 +2,9 @@
 \alias{run.pipeline}
 \title{Run the oposSOM pipeline.}
 \author{Henry Wirth}
-\description{Translates input expression data into SOM metagene structure and outputs results in standardized scheme. }
+\description{This function realizes the complete pipeline functionality: single gene expression values are culstered to metagenes using a self-organizing map.
+Based on these metagenes, visualizations (e.g. expression profiles) and downstreaming analysis approaches (e.g. hierarchical clustering, ICA or geneset overrepresentation analysis) are performed.
+}
 \usage{
 run.pipeline( indata, dataset.name = "Unnamed", dim.som1 = 20, dim.som2 = 20 )
 }
@@ -13,16 +15,38 @@ run.pipeline( indata, dataset.name = "Unnamed", dim.som1 = 20, dim.som2 = 20 )
 \item{dim.som2}{resolution of the second level SOM: number of tiles equals dim.som2^2.}
 }
 \details{
-If \code{indata} is supplied with ENSEMBL-IDs as rownames, geneset overrepresentation analysis is carried out using predefined GO sets according to GSEA database (http://www.broadinstitute.org/gsea).
+If \code{indata} is supplied with ENSEMBL-IDs as rownames, geneset overrepresentation analysis is carried out using predefined GO sets according to GSEA database (http://www.broadinstitute.org/gsea). 
+The results are contained in summary sheets of the integrated maps, e.g. the overexpression overview map.
 }
-\value{
-The pipeline will create a folder in the working directory according to \code{dataset.name} containing all results. Additionally, a HTML summary file is created which contains brief descriptions and links to all results.
+\value{         
+\item{}{The pipeline will create a folder in the working directory according to \code{dataset.name} containing all results. Graphical output is provided in respective files sole to ensure functionality in command line mode.}
+\item{}{Additionally, a HTML summary file is created which contains brief descriptions and links to all results:}
+\item{}{-  Expression profiles for all samples in different color modes(standard, loglog and WAD). }
+\item{}{-  Supporting maps illustrating properties of the SOM as metagene population, variance and concordance.}
+\item{}{-  Second level SOM providing sample-centered view on relations and similarities between the samples.}
+\item{}{-  Metagene based downstreaming analysis: Hierarchical clustering, pairwise correlation matrix and spanning tree, and independent component analysis.}
+\item{}{-  Report sheets for the spot summary maps containing various information of identified clusters of metagenes.}
 }
 \examples{
-## create data matrix
-m = matrix( runif(1000), 100, 10 )
+library( oposSOM )
+
+
+#### Toy example ####
+
+## create data
+toy.data = matrix( runif(10000), 1000, 10 )
+
 ## run pipeline
-run.pipeline( m )
+run.pipeline( toy.data, dataset.name = "Example", dim.som1 = 20, dim.som2 = 20 )
+
+
+#### Real data example - takes some time to process ####
+
+## load data
+#data( tissues )
+
+## run pipeline
+#run.pipeline( tissue.data, dataset.name="Tissue Example" )
 }
 \references{
 Wirth, Loeffler, v.Bergen, Binder: Expression cartography of human tissues using self organizing maps. (BMC Bioinformatics 2011)

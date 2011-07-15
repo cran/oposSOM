@@ -8,7 +8,7 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	preferences$dim.som2 = dim.som2
 			
 	preferences$sample.spot.cutoff = 0.65
-	preferences$summary.spot.cutoff = 0.90
+	preferences$summary.spot.cutoff = 0.95
 		
 	
 

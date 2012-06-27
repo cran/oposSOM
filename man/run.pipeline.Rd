@@ -15,7 +15,7 @@ run.pipeline( indata, dataset.name = "Unnamed", dim.som1 = 20, dim.som2 = 20 )
 \item{dim.som2}{resolution of the second level SOM: number of tiles equals dim.som2^2.}
 }
 \details{
-If \code{indata} is supplied with ENSEMBL-IDs as rownames, geneset overrepresentation analysis is carried out using predefined GO sets according to GSEA database (http://www.broadinstitute.org/gsea). 
+If \code{indata} is supplied with ENSEMBL-IDs as rownames, geneset overrepresentation analysis is carried out using predefined GO gene sets automatically downloaded from Ensembl database (http://www.ensembl.org). 
 The results are contained in summary sheets of the integrated maps, e.g. the overexpression overview map.
 }
 \value{         
@@ -50,4 +50,6 @@ run.pipeline( toy.data, dataset.name = "Example", dim.som1 = 20, dim.som2 = 20 )
 }
 \references{
 Wirth, Loeffler, v.Bergen, Binder: Expression cartography of human tissues using self organizing maps. (BMC Bioinformatics 2011)
+
+Wirth, v.Bergen, Binder: MALDI-typing of infectious algae of the genus Prototheca using SOM portraits. (Journal of microbiological methods 2012)
 }

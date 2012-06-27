@@ -95,25 +95,86 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 
 
 
+	## load gene set annotations from ensembl database
+
 	cat( "Load Annotation Data\n\n" ); flush.console()
 
-		gene.names = rownames(indata)
-		names( gene.names ) = rownames(indata)
-		
-		gene.descriptions = rep( "", nrow( indata ) )
-		names( gene.descriptions ) = rownames(indata)
-		
-		gene.ids = rownames(indata)
-		names( gene.ids ) = rownames(indata)
-		
-		gs.def.list = list()
-		load( system.file( 'extdata/GSEA_GO_sets.rda', package="oposSOM" ) )
-		
-		preferences$geneset.analysis = any( gene.ids %in% unlist( sapply(gs.def.list,head,1) ) )
-		
+	
+#	if( length( .find.package( "biomaRt", quiet=T ) ) == 0 )
+#	{
+#		source("http://bioconductor.org/biocLite.R")
+#		biocLite( "biomaRt" )
+#	}
+#	library( biomaRt )
+	
+	
+	gene.names = rownames(indata)
+	names(gene.names) = rownames(indata)
+	gene.descriptions = rep("", nrow(indata))
+	names(gene.descriptions) = rownames(indata)
+	gene.ids = rownames(indata)
+	names(gene.ids) = rownames(indata)
+	gs.def.list = list()
+	preferences$geneset.analysis = F
+	
+	
+	mart = useMart('ensembl')
+	ds = listDatasets(mart)$dataset
+	use.dataset = ""
+	if( length( grep("ENS", rownames(indata)) ) > 0 )
+		for( i in ds )
+		{
+			try({
+				mart<-useDataset( as.character(i),mart=mart)
+	
+				biomart.table = getBM( "ensembl_gene_id", "ensembl_gene_id", rownames(indata)[seq(1,nrow(indata),length.out=10)], mart, checkFilters=F )		
+				if( nrow(biomart.table) != 0 )
+				{
+					use.dataset = as.character(i)		
+					break
+				}
+			}, silent=T )
+		}
+	if( use.dataset == "" )
+	{		
+		cat("Could not download GO annotation. Gene set analysis will not be performed.\n\n")		
+	} else
+	{
 		unique.protein.ids = unique(gene.ids)
-
-
+		
+		biomart.table = getBM( c( "ensembl_gene_id", "go_id", "name_1006", "namespace_1003" ) , "ensembl_gene_id", unique.protein.ids, mart, checkFilters=F )
+		gs.def.list = tapply( biomart.table[,1], biomart.table[,3], c  )
+		gs.def.list = lapply( gs.def.list, function(x){ list( Genes=x, Type="" ) } )
+		
+		gs.def.list = gs.def.list[ - which( names(gs.def.list) == "" ) ]
+		gs.def.list = gs.def.list[ - which( sapply( sapply( gs.def.list, head, 1 ), length ) < 10 ) ]	
+		
+		gs.def.list = gs.def.list[ order( names( gs.def.list ) ) ]
+		
+		gs.def.list = lapply( gs.def.list, function(x)
+		{ 
+			x$Genes = intersect( x$Genes, unique.protein.ids )	
+			return(x)
+		} )
+	
+		empty.gs = which( sapply( sapply( gs.def.list, head, 1 ), length ) == 0 )
+		if( length(empty.gs) > 0 )
+		{
+			gs.def.list = gs.def.list[ - empty.gs ]
+		}
+	
+		if( length(gs.def.list) > 0 )
+		{                                             	
+			preferences$geneset.analysis = T
+			cat( "Download of", length(gs.def.list), "GO sets using",use.dataset,"\n\n" ); flush.console()
+			
+		} else
+		{
+			cat("Could not download GO annotation. Gene set analysis will not be performed.\n\n")
+		}		
+		
+	}
+	
 
 
 
@@ -124,7 +185,7 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	files.name = preferences$dataset.name
 
 
-	while( file.exists( paste( files.name, ".RData", sep="" ) ) )
+	while( file.exists( paste( files.name, ".html", sep="" ) ) )
 		files.name = paste( files.name, "+", sep="" )
 
 
@@ -839,7 +900,7 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 
 
 
-	cat( "Plotting Supersom\n\n" ); flush.console()
+	cat( "2nd level SOM\n\n" ); flush.console()
 
 
 	supersom.custom = som( t(metadata), xdim=preferences$dim.som2, ydim=preferences$dim.som2 )
@@ -858,7 +919,7 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	
 	
 	
-		pdf( paste( files.name, "- Results/Supersom.pdf" ), 21/2.54, 21/2.54 )
+		pdf( paste( files.name, "- Results/2nd level SOM.pdf" ), 21/2.54, 21/2.54 )
 	
 	
 	
@@ -1147,7 +1208,7 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 
 
 
-	cat( "Processing Standard Methods\n\n" ); flush.console()
+	cat( "Processing 2nd level Standard Analyses\n\n" ); flush.console()
 	
 
 
@@ -1203,7 +1264,7 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	
 	
 	
-		pdf( paste( files.name, "- Results/Filtered methods correlation.pdf" ), 29.7/2.54, 21/2.54 )
+		pdf( paste( files.name, "- Results/2nd level correlation analysis.pdf" ), 29.7/2.54, 21/2.54 )
 	
 	
 		for( i in 1:length(filter.list) )
@@ -1256,7 +1317,7 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	
 	
 	
-		pdf( paste( files.name, "- Results/Filtered methods distance.pdf" ), 29.7/2.54, 21/2.54 )
+		pdf( paste( files.name, "- Results/2nd level distance analysis.pdf" ), 29.7/2.54, 21/2.54 )
 	
 	
 		for( i in 1:length(filter.list) )
@@ -1303,7 +1364,7 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	
 	
 	
-		pdf( paste( files.name, "- Results/Filtered methods component.pdf" ), 29.7/2.54, 21/2.54 )
+		pdf( paste( files.name, "- Results/2nd level component analysis.pdf" ), 29.7/2.54, 21/2.54 )
 	
 	
 		for( i in 1:length(filter.list) )
@@ -1791,7 +1852,7 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 		</TR>
 	
 		<TR>
-		<TD><a href=\"", files.name, " - Results/Supersom.pdf\" target=\"_blank\">
+		<TD><a href=\"", files.name, " - Results/2nd level SOM.pdf\" target=\"_blank\">
 			Second level SOM</a></TD>
 		</TR>
 	
@@ -1815,17 +1876,17 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 		<TD rowspan=5 >Several agglomerative methods based either on distance or on correlation metrics are applied to the samples using filtered subsets of metagenes.
 				The reports show two-way hierarchical clustering heatmaps, pairwise correlation maps, minimum spanning trees and the ICA results.<br></TD>
 	
-		<TD><a href=\"", files.name, " - Results/Filtered methods distance.pdf\" target=\"_blank\">
+		<TD><a href=\"", files.name, " - Results/2nd level distance analysis.pdf\" target=\"_blank\">
 			Distance based methods ( Clustering, Phylogenetic Tree )</a></TD>
 		</TR>
 	
 		<TR>
-		<TD><a href=\"", files.name, " - Results/Filtered methods correlation.pdf\" target=\"_blank\">
+		<TD><a href=\"", files.name, " - Results/2nd level correlation analysis.pdf\" target=\"_blank\">
 			Correlation based methods ( MST, PCM )</a></TD>
 		</TR>
 	
 		<TR>
-		<TD><a href=\"", files.name, " - Results/Filtered methods component.pdf\" target=\"_blank\">
+		<TD><a href=\"", files.name, " - Results/2nd level component analysis.pdf\" target=\"_blank\">
 			Component based methods ( 2d-ICA )</a></TD>
 		</TR>
 	

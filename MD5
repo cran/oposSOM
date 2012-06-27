@@ -1,10 +1,9 @@
-5740b9a24a78a721c1a67eb03ab04a82 *DESCRIPTION
-93a8c7141343aaf56acf44f6dbfad5f0 *NAMESPACE
-9ae437c4bccb3ac1d9880a0b2c0cc0c6 *R/pipeline.r
+fa2a2cf7c1cf4dd44b6224f01c81ed5b *DESCRIPTION
+f15e935f0031b6c6b46ed2c7c3f49d11 *NAMESPACE
+2a6b272a6e530dd215b62a16364c91f7 *R/pipeline.r
 9972dc421c9f4a38cd09ae545ea44783 *data/datalist
-a513a235fe260b74696e869f0e5f01ff *data/tissues.RData
+e44e269449ab23727b545fe1578c349e *data/tissues.RData
 1b8f4dae650d0a4d63652caac0ed7775 *inst/CITATION
-82069f69331363fc82644f35426bd494 *inst/extdata/GSEA_GO_sets.rda
-c625c830cd90c7714c45f93bae40b69e *man/oposSOM-package.Rd
-07dbb895cb9c00ea86940287b7196e0d *man/run.pipeline.Rd
+1712fbe859833505e2f013c95d31363e *man/oposSOM-package.Rd
+2cc79c82fcdd99b16e6329a941ea8a78 *man/run.pipeline.Rd
 3b367e361e8e62da6fb9a9fd466a0827 *man/tissues.Rd

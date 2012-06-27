@@ -4,6 +4,7 @@ import(som)
 import(fastICA)
 import(igraph)
 import(ape)
+import(biomaRt)
 
 export(
   "run.pipeline"

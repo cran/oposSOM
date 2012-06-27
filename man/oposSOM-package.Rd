@@ -13,8 +13,8 @@ Additionally, a HTML summary file is created collating and linking all analysis 
 \tabular{ll}{
 Package: \tab oposSOM\cr
 Type: \tab Package\cr
-Version: \tab 0.1-4\cr
-Date: \tab 2012-04-12\cr
+Version: \tab 0.2-1\cr
+Date: \tab 2012-06-27\cr
 License: \tab GPL (>= 2)\cr
 LazyLoad: \tab yes\cr
 }
@@ -26,6 +26,8 @@ Maintainer: Henry Wirth <wirth@izbi.uni-leipzig.de>
 }
 \references{
 Wirth, Loeffler, v.Bergen, Binder: Expression cartography of human tissues using self organizing maps. (BMC Bioinformatics 2011)
+
+Wirth, v.Bergen, Binder: MALDI-typing of infectious algae of the genus Prototheca using SOM portraits. (Journal of microbiological methods 2012)
 }
 \keyword{ package }
 \examples{

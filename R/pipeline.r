@@ -47,7 +47,8 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 		cat( "\n!!Removed NAs from data set!!\n" ); flush.console()
 	}	
 
-	indata = indata - apply( indata, 1, mean )
+	indata.mean.level = rowMeans( indata )
+	indata = indata - indata.mean.level
 
 
 
@@ -92,7 +93,9 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 
 	som.nodes = ( som.result$visual[,"x"] + 1 ) +  som.result$visual[,"y"] * preferences$dim.som1
 	names( som.nodes ) = rownames( indata )
-
+	genes.coordinates = apply( som.result$visual[,c(1,2)]+1, 1, paste, collapse=" x " )
+	names( genes.coordinates ) = rownames(indata)
+	
 
 
 	## load gene set annotations from ensembl database
@@ -140,6 +143,19 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 		cat("Could not download GO annotation. Gene set analysis will not be performed.\n\n")		
 	} else
 	{
+		
+		biomart.table = getBM( c( "ensembl_gene_id", "external_gene_id", "description", "ensembl_gene_id", "chromosome_name","band" ) , "ensembl_gene_id", rownames(indata), mart, checkFilters=F )
+		
+		h = biomart.table[,2]
+		names(h) = biomart.table[,1]
+		gene.names[ as.character( unique(biomart.table[,1]) ) ] = h[ as.character( unique(biomart.table[,1]) ) ]
+			
+		h = biomart.table[,3]
+		names(h) = biomart.table[,1]
+		gene.descriptions[ as.character( unique(biomart.table[,1]) ) ] = h[ as.character( unique(biomart.table[,1]) ) ]
+						
+		
+		
 		unique.protein.ids = unique(gene.ids)
 		
 		biomart.table = getBM( c( "ensembl_gene_id", "go_id", "name_1006", "namespace_1003" ) , "ensembl_gene_id", unique.protein.ids, mart, checkFilters=F )
@@ -747,6 +763,12 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 
 
 
+	
+	
+
+
+	
+	
 
 	cat( "Plotting Sample Profiles\n\n" ); flush.console()
 	
@@ -1410,12 +1432,9 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	cat( "Summary Sheets\n\n" ); flush.console()
 
 
-
-	
 		dir.create( paste( files.name, "- Results/Summary Sheets - Overviews" ), showWarnings=F )
-	
-	
-	
+		dir.create( paste( files.name, "- Results/CSV Sheets" ), showWarnings=F )	
+		dir.create( paste( files.name, "- Results/CSV Sheets/Spot Lists" ), showWarnings=F )
 	
 	
 		
@@ -1574,42 +1593,17 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	
 			for( m in which( names(set.list) != "overview.map" ) )
 			{
+		
+				layout( matrix( c(1,2,4,1,3,4,5,5,6,7,7,8), 3, 4 ), width=c(1,1,2,2), heights=c(2,1,1) )
 	
-				sample.with.spot = apply( metadata, 2, function(x)
-							{  
-								sample.spot = which( x > quantile( x, 0.98 ) ) 
-								length( intersect( set.list[[ m ]]$metagenes, sample.spot ) ) > 0
-							} )
-				
-	
-	
-	
-				layout( matrix( c(1,2,0,1,3,0,4,4,5,6,6,7), 3, 4 ), width=c(1,1,2,2), heights=c(2,1,1) )
-	
-	
-	
-	
-				par( mar=c( 0,0,0,0 ) )
-	
-				plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )
-	
-				text( 0.1, 0.94, main , cex=2.6, adj=0 )	
-	
-		 		text( 0.1, 0.8, "Spot Summary" , cex=1.8, adj=0 )	
-	
+				par( mar=c( 0,0,0,0 ) )	
+				plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )	
+				text( 0.1, 0.94, main , cex=2.6, adj=0 )		
+		 		text( 0.1, 0.8, "Spot Summary" , cex=1.8, adj=0 )		
 				text( 0.1, 0.7, paste( "# metagenes =", length( set.list[[ m ]]$metagenes ) ), adj=0 )
-				text( 0.1, 0.65, paste( "# genes =", length( set.list[[ m ]]$genes ) ), adj=0 )
-	
-	
+				text( 0.1, 0.65, paste( "# genes =", length( set.list[[ m ]]$genes ) ), adj=0 )	
 				text( 0.1, 0.55, paste( "<r> metagenes =", round(mean( cor( t( metadata[ set.list[[ m ]]$metagenes, ] ) ) ), 2 ) ), adj=0 )
 				suppressWarnings( try( text( 0.1, 0.5, paste( "<r> genes =", round(mean( cor( t( indata[ set.list[[ m ]]$genes, ] ) ) ), 2 ) ), adj=0 ), silent=T ) )
-	
-				text( 0.1, 0.4, paste( "# samples with spot =", sum(sample.with.spot), "(", round( 100 * sum(sample.with.spot)/ncol(indata), 1), "% )" ), adj=0 )
-	
-	
-	
-	
-	
 	
 	
 				par( mar=c( 2,3,3,1 ) )
@@ -1630,47 +1624,62 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 					box()
 	 
 	
-	
-	
-	
-	
-	
-	
-	
-				par( mar=c( 0,0,0,0 ) )
-	
-				x.coords = c( 0, 0.15, 0.4 )
-				y.coords = seq( 0.75, 0.02, length.out=n.samples )
-	
-	
-			
-	
-	
-	
-	
-				mean.FC = apply( indata, 2, function(x){ mean( x[ set.list[[ m ]]$genes ] ) } )
-	
-				o = order( abs( mean.FC ), decreasing=T )[1:n.samples]
-	
+				
+				if( length(set.list[[m]]$genes) > 0 )
+				{					
+					# Spot Profile Plot
+					
+					mean.FC = apply( indata, 2, function(x){ mean( x[ set.list[[ m ]]$genes ] ) } )					
+					par( mar=c( 8,3,1,1 ) )
+					barplot( mean.FC, col=group.colors, main="", names.arg=colnames(indata), las=2, cex.main=1, cex.lab=1, cex.axis=1, cex.names=0.8, border = if( ncol(indata) < 80 ) "black" else NA )
+					box()
+															
+					# Spot Genelist				
+					r.genes = sapply( set.list[[m]]$genes, function(x)
+					{ 
+						gene = indata[x,]
+						metagene = metadata[ som.nodes[x], ]
+						
+						return( suppressWarnings(	cor( gene, metagene )	) )
+					} )
+										
+					e.max = apply( indata[ set.list[[m]]$genes, ,drop=F], 1, max )
+					e.min = apply( indata[ set.list[[m]]$genes, ,drop=F], 1, min )			
+					
+					if( main %in% c("Sample-Underexpression","Metagene Minima") )
+					{
+						o = names( sort( e.min, decreasing=F ) )								
+					}	else
+					{
+						o = names( sort( e.max, decreasing=T ) )				
+					}
+					
+					n.genes = 20
+					o = o[ 1:min(n.genes,length(o)) ]
+					
+					par( mar=c( 0,0,0,0 ) )
+					x.coords = c( 0, 0.06, 0.2, 0.28, 0.36, 0.44, 0.52 )
+					y.coords = seq( 0.75, 0.02, length.out=length(o) )				
+					plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )
+					text( 0, 0.88, "Spot Genelist", cex=1.8, adj=0 )
+					text( x.coords, rep( c( 0.82, 0.80 ), 4 )[1:7], c( "Rank", "ID", "max e", "min e", "r", "Symbol", "Description" ), cex=1, adj=0 )
+					text( x.coords[1], y.coords, c( 1:length(o) ), adj=0 )				
+					text( x.coords[2], y.coords, o, cex=0.6, adj=0 )
+					rect( x.coords[3]-0.02, y.coords[1]+0.01, 1, 0, border="white", col="white" )
+					text( x.coords[3], y.coords, round( e.max[o], 2 ), cex=0.6, adj=0 )
+					text( x.coords[4], y.coords, round( e.min[o], 2 ), cex=0.6, adj=0 )
+					text( x.coords[5], y.coords, round( r.genes[o], 2 ), cex=0.6, adj=0 )
+					text( x.coords[6], y.coords, gene.names[o], cex=0.6, adj=0 )
+					text( x.coords[7], y.coords, gene.descriptions[o], cex=0.6, adj=0 )
+									
+				} else
+				{
+					plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )				
+					plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )
+				}						
 				plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )
-			
-	
-					text( 0, 0.88, "Sample List", cex=1.8, adj=0 )
-	
-	
-					text( x.coords, rep( 0.82, 3 ), c( "Rank", "Sample", "<log(FC)>" ), cex=1, adj=0 )
-			
-					text( x.coords[1], y.coords, c( 1:n.samples ), adj=0 )
-	
-					text( x.coords[2], y.coords, colnames( indata )[o], cex=0.6, adj=0 )
-					text( x.coords[3], y.coords, round( mean.FC[o], 2 ), cex=0.6, adj=0 )
-			
-	
-	
-	
-				plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )
-	
-	
+				
+				
 	
 	
 				if( preferences$geneset.analysis )
@@ -1700,6 +1709,52 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	
 	
 				}
+				
+				
+				
+				## CSV Table
+				
+				if( length(set.list[[m]]$genes) > 0 )
+				{					
+					r.genes = sapply( set.list[[m]]$genes, function(x)
+					{ 
+						gene = indata[x,]
+						metagene = metadata[ som.nodes[x], ]
+						
+						return( suppressWarnings(	cor( gene, metagene )	) )		
+					} )
+					r.t = r.genes / sqrt( ( 1-r.genes^2 ) / (ncol(indata)-2) )
+					r.p = 1 - pt( r.t, ncol(indata)-2 )
+									
+					
+					e.max = apply( indata[ set.list[[m]]$genes, ,drop=F], 1, max )
+					e.min = apply( indata[ set.list[[m]]$genes, ,drop=F], 1, min )
+					
+					if( main %in% c("Sample-Underexpression","Metagene Minima") )
+					{
+						o = names( sort( e.min, decreasing=F ) )								
+					}	else
+					{
+						o = names( sort( e.max, decreasing=T ) )				
+					}
+					
+					
+					out = data.frame( Rank=c(1:length(set.list[[m]]$genes)), ID = o, Symbol = gene.names[o] )
+										
+					out = cbind( 	out,
+												"mean expression" = indata.mean.level[o],
+												"max delta e" = e.max[o],
+												"min delta e" = e.min[o],
+												"correlation" = r.genes[o],
+												"->t.score" = r.t[o],
+												"->p.value" = r.p[o],
+												"Metagene" = genes.coordinates[o],
+												"Description"= gene.descriptions[o] )
+					
+					write.csv2(  out, paste( files.name, " - Results/CSV Sheets/Spot Lists/", main, " ", names(set.list)[m], ".csv", sep="" ) )
+					
+				}				
+				
 	
 	
 			}
@@ -1747,6 +1802,326 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 
 
 
+	# Sample spot detection
+		
+		GS.infos.samples = list()
+		
+		for( j in 1:ncol( indata ) )
+		{
+			GS.infos.samples[[ j ]] = list()
+			
+			mask = matrix( NA, preferences$dim.som1, preferences$dim.som1 )			
+			blob = matrix( metadata[,j], preferences$dim.som1, preferences$dim.som1 )
+			
+			mask[ which( blob > max(blob) * preferences$sample.spot.cutoff ) ] = -1
+			mask[ which( blob < min(blob) * preferences$sample.spot.cutoff ) ] = -2
+			
+			GS.infos.samples[[ j ]]$regulated = mask
+			
+			spot.i = 0
+			spot.updown = c()
+			while( nrow( which( mask == -1, arr.ind=T ) ) > 0 )
+			{
+				start.pix = which( mask == -1, arr.ind=T )[1,]
+				
+				spot.i = spot.i + 1
+				mask = col.pix( mask, start.pix[1], start.pix[2], spot.i )
+				
+				spot.updown  = c( spot.updown, "overexpressed" )
+			}	
+			while( nrow( which( mask == -2, arr.ind=T ) ) > 0 )
+			{
+				start.pix = which( mask == -2, arr.ind=T )[1,]
+				
+				spot.i = spot.i + 1
+				mask = col.pix( mask, start.pix[1], start.pix[2], spot.i )
+				
+				spot.updown  = c( spot.updown, "underexpressed" )
+			}	
+			
+			GS.infos.samples[[ j ]]$spots = list()
+			
+			if( spot.i > 0 )
+				for( spot.ii in 1:spot.i )
+				{
+					GS.infos.samples[[ j ]]$spots[[spot.ii]] = list()
+					
+					GS.infos.samples[[ j ]]$spots[[spot.ii]]$type = spot.updown[ spot.ii ]
+					
+					GS.infos.samples[[ j ]]$spots[[spot.ii]]$metagenes = which( mask == spot.ii ) 
+					GS.infos.samples[[ j ]]$spots[[spot.ii]]$genes = names( som.nodes )[ which( som.nodes %in% which( mask == spot.ii ) ) ]
+					
+					GS.infos.samples[[ j ]]$spots[[spot.ii]]$mask = matrix( NA, preferences$dim.som1, preferences$dim.som1 )
+					GS.infos.samples[[ j ]]$spots[[spot.ii]]$mask[ which( mask == spot.ii ) ] = 1
+				}	
+			
+		}	
+		names( GS.infos.samples ) = colnames( indata )
+		
+		
+
+
+	
+	
+	dir.create( paste( files.name, "- Results/Summary Sheets - Samples" ), showWarnings=F )
+	
+	
+	
+	
+	for( m in 1:ncol( indata ) )
+	{
+		
+		
+		
+		
+		pdf( paste( files.name, " - Results/Summary Sheets - Samples/",make.unique(colnames(indata))[m],".pdf", sep="" ), 29.7/2.54, 21/2.54 )
+		
+		
+		## Global Sheet
+		
+		
+		layout( matrix( c(1,2,0,1,3,0,4,4,5,6,6,7), 3, 4 ), width=c(1,1,2,2), heights=c(2,1,1) )
+		
+		par( mar=c( 0,0,0,0 ) )
+		plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )
+		text( 0.1, 0.94, colnames(indata)[m] , cex=3, adj=0 )	
+		text( 0.1, 0.8, "Global Summary" , cex=1.8, adj=0 )	
+		text( 0.1, 0.35,  paste( "<FC> =", round( mean( indata[,m] ), 2 ) ), adj=0 )
+		
+		
+		
+		par( mar=c( 2,3,3,1 ) )
+		image( matrix( metadata[,m], preferences$dim.som1, preferences$dim.som1 ), axes=F, col = colramp(1000), main="Profile", cex.main=1.5 )
+		axis( 1, seq( 0, 1, length.out = preferences$dim.som1/10+1 ), c( 1, seq( 10, preferences$dim.som1, length.out = preferences$dim.som1/10 ) ), cex.axis=1.0 )
+		axis( 2, seq( 0, 1, length.out = preferences$dim.som1/10+1 ), c( 1, seq( 10, preferences$dim.som1, length.out = preferences$dim.som1/10 ) ), cex.axis=1.0, las=1 )
+		box()
+				
+		image( matrix( metadata[,m], preferences$dim.som1, preferences$dim.som1 ), axes=F, col = colramp(1000), main="Regulated Spots", cex.main=1.5 )
+		par( new=T )
+		mask = GS.infos.samples[[ m ]]$regulated
+		mask[ which( is.na( GS.infos.samples[[ m ]]$regulated ) ) ] = 1
+		mask[ which( !is.na( GS.infos.samples[[ m ]]$regulated ) ) ] = NA
+		image( matrix( mask, preferences$dim.som1, preferences$dim.som1 ), axes=F, col = "white" )
+		axis( 1, seq( 0, 1, length.out = preferences$dim.som1/10+1 ), c( 1, seq( 10, preferences$dim.som1, length.out = preferences$dim.som1/10 ) ), cex.axis=1.0 )
+		axis( 2, seq( 0, 1, length.out = preferences$dim.som1/10+1 ), c( 1, seq( 10, preferences$dim.som1, length.out = preferences$dim.som1/10 ) ), cex.axis=1.0, las=1 )
+		box()
+		
+	
+		
+		
+		
+		par( mar=c( 0,0,0,0 ) )
+		
+		n.genes = 20
+		
+		x.coords = c( 0, 0.06, 0.2, 0.28, 0.36, 0.44, 0.52 )
+		y.coords = seq( 0.75, 0.02, length.out=n.genes )
+		
+		o = order( indata[,m], decreasing=T )[1:n.genes]
+		
+		plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )
+		text( 0, 0.88, "Global Genelist", cex=1.8, adj=0 )
+		text( x.coords, rep( c( 0.82, 0.80 ), 4 )[1:7], c( "Rank", "ID", "log(FC)", "", "", "Metagene", "Description" ), cex=1, adj=0 )	
+		text( x.coords[1], y.coords, c( 1:n.genes ), adj=0 )		
+		text( x.coords[2], y.coords, rownames( indata )[o], cex=0.6, adj=0 )
+		rect( x.coords[3]-0.02, y.coords[1]+0.01, 1, 0, border="white", col="white" )
+		text( x.coords[3], y.coords, round( indata[ o, m ], 2 ), cex=0.6, adj=0 )
+		text( x.coords[6], y.coords, genes.coordinates[o], cex=0.6, adj=0 )
+		text( x.coords[7], y.coords, gene.descriptions[o], cex=0.6, adj=0 )
+		
+		
+		
+		if( length( GS.infos.samples[[ m ]]$spots ) > 0 )
+			for( spot.i in 1:length( GS.infos.samples[[ m ]]$spots ) )
+				if( length(GS.infos.samples[[ m ]]$spots[[spot.i]]$genes) > 1 )
+				{
+					
+					spot.genes = GS.infos.samples[[ m ]]$spots[[spot.i]]$genes
+					spot.metagenes = GS.infos.samples[[ m ]]$spots[[spot.i]]$metagenes
+					
+					n.genes = min( 20, length(spot.genes) )
+					
+					o = names( sort( indata[ spot.genes, m ], decreasing=T ) )[1:n.genes]								
+					
+					layout( matrix( c(1,2,0,1,3,0,4,4,5,6,6,7), 3, 4 ), width=c(1,1,2,2), heights=c(2,1,1) )	
+					
+					par( mar=c( 0,0,0,0 ) )					
+					plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )
+					text( 0.1, 0.94, colnames(indata)[m] , cex=3, adj=0 )	
+					text( 0.1, 0.8, "Local Summary" , cex=1.8, adj=0 )	
+					text( 0.1, 0.65, paste( "# metagenes =", length( spot.metagenes ) ), adj=0 )
+					text( 0.1, 0.6, paste( "# genes =", length( spot.genes ) ), adj=0 )					
+					text( 0.1, 0.275, paste( "<r> metagenes =", round(mean( cor( t( metadata[ spot.metagenes, ] ) ) ), 2 ) ), adj=0 )
+					if( length(spot.genes) < 2000 )
+						text( 0.1, 0.225, paste( "<r> genes =", round(mean( cor( t( indata[ spot.genes, ] ) ) ), 2 ) ), adj=0 )														
+					text( 0.1, 0.15, paste( "<FC> =", round( mean( indata[spot.genes,m] ), 2 ) ), adj=0 )
+		
+
+					par( mar=c( 2,3,3,1 ) )					
+					image( matrix( metadata[,m], preferences$dim.som1, preferences$dim.som1 ), axes=F, col = colramp(1000), main="Profile", cex.main=1.5 )
+					axis( 1, seq( 0, 1, length.out = preferences$dim.som1/10+1 ), c( 1, seq( 10, preferences$dim.som1, length.out = preferences$dim.som1/10 ) ), cex.axis=1.0 )
+					axis( 2, seq( 0, 1, length.out = preferences$dim.som1/10+1 ), c( 1, seq( 10, preferences$dim.som1, length.out = preferences$dim.som1/10 ) ), cex.axis=1.0, las=1 )
+					box()
+					
+					image( matrix( metadata[,m], preferences$dim.som1, preferences$dim.som1 ), axes=F, col = colramp(1000), main="Spot", cex.main=1.5 )
+					par( new=T )
+					mask = GS.infos.samples[[ m ]]$spots[[spot.i]]$mask
+					mask[ which( is.na( GS.infos.samples[[ m ]]$spots[[spot.i]]$mask ) ) ] = 1
+					mask[ which( !is.na( GS.infos.samples[[ m ]]$spots[[spot.i]]$mask ) ) ] = NA
+					image( matrix( mask, preferences$dim.som1, preferences$dim.som1 ), axes=F, col = "white" )
+					axis( 1, seq( 0, 1, length.out = preferences$dim.som1/10+1 ), c( 1, seq( 10, preferences$dim.som1, length.out = preferences$dim.som1/10 ) ), cex.axis=1.0 )
+					axis( 2, seq( 0, 1, length.out = preferences$dim.som1/10+1 ), c( 1, seq( 10, preferences$dim.som1, length.out = preferences$dim.som1/10 ) ), cex.axis=1.0, las=1 )
+					box()
+					
+					
+					
+					
+					par( mar=c( 0,0,0,0 ) )					
+					
+					x.coords = c( 0, 0.06, 0.2, 0.28, 0.36, 0.44, 0.52 )
+					y.coords = seq( 0.75, 0.02, length.out=n.genes )					
+					
+					plot( 0, type="n", axes=F, xlab="", ylab="", xlim=c(0,1), ylim=c(0,1) )										
+					text( 0, 0.88, "Local Genelist", cex=1.8, adj=0 )
+					
+					
+					text( x.coords, rep( c( 0.82, 0.80 ), 4 )[1:7], c( "Rank", "ID", "log(FC)", "", "", "Metagene", "Description" ), cex=1, adj=0 )
+					
+					text( x.coords[1], y.coords, c( 1:n.genes ), adj=0 )					
+					text( x.coords[2], y.coords, o, cex=0.6, adj=0 )
+					rect( x.coords[3]-0.02, y.coords[1]+0.01, 1, 0, border="white", col="white" )
+					text( x.coords[3], y.coords, round( indata[ o, m ], 2 ), cex=0.6, adj=0 )
+					text( x.coords[6], y.coords, genes.coordinates[o], cex=0.6, adj=0 )
+					text( x.coords[7], y.coords, gene.descriptions[o], cex=0.6, adj=0 )
+									
+				}	
+		
+			dev.off()
+					
+		}			
+	
+		
+
+	
+	
+
+	dir.create( paste( files.name, "- Results/CSV Sheets/Gene Lists - Global" ), showWarnings=F )
+	dir.create( paste( files.name, "- Results/CSV Sheets/Gene Lists - Local" ), showWarnings=F )
+
+	
+	#### Global Gene Lists ####
+
+	cat("Gene Lists\n\n" ); flush.console()
+	
+	for( m in 1:ncol( indata ) )
+	{
+		
+		o = order( indata[,m], decreasing=T )
+			
+		out = data.frame( Rank=c(1:nrow(indata)),	ID = rownames( indata )[o],	Symbol = gene.names[o] )			
+		out = cbind( 	out,
+									logFC = indata[ o, m ],
+									Metagene = genes.coordinates[o],
+									Description = gene.descriptions[o] )
+				
+		f = file( paste( files.name, " - Results/CSV Sheets/Gene Lists - Global/", colnames(indata)[m], ".csv", sep="" ), "w")
+				
+		writeLines( "Sample Summary:", f )
+		writeLines( "", f )
+		writeLines( paste( "<FC> =", round( mean( indata[,m] ), 2 ) )  ,f )
+		writeLines( "", f );	writeLines( "", f );	writeLines( "", f )
+		writeLines( "Gene Statistics", f )
+		writeLines( "", f )
+		write.csv2( out, file=f, row.names=F )
+		
+		close(f)		
+	}
+	
+	
+	
+	for( m in 1:ncol( indata ) )
+	{
+		if( length( GS.infos.samples[[ m ]]$spots ) > 0 )
+			for( spot.i in 1:length( GS.infos.samples[[ m ]]$spots ) )
+				if( length(GS.infos.samples[[ m ]]$spots[[spot.i]]$genes) > 1 )
+				{			
+					spot.genes = GS.infos.samples[[ m ]]$spots[[spot.i]]$genes
+					spot.metagenes = GS.infos.samples[[ m ]]$spots[[spot.i]]$metagenes
+										
+					o = names( sort( indata[ spot.genes, m ], decreasing=T ) ) 
+									
+					out = data.frame( Rank=c(1:length(spot.genes)), ID = o, Symbol = gene.names[o] )
+					out = cbind(	out,
+											 logFC = indata[ o, m ],
+											 Metagene = genes.coordinates[o],
+											 Description = gene.descriptions[o] )
+										
+					n = paste( files.name, " - Results/CSV Sheets/Gene Lists - Local/", colnames(indata)[m],".", spot.i, ".csv", sep="" )
+					
+					f = file( n, "w")					
+					
+					writeLines( "Spot Summary:", f )
+					writeLines( "", f )
+					writeLines( paste( "# metagenes:" ,"", length( spot.metagenes ), sep=";" ), f )
+					writeLines( paste( "# genes:" ,"", length( spot.genes ), sep=";" ), f )
+					writeLines( "", f )
+					writeLines( paste( "<r> metagenes:" ,"", round(mean( cor( t( metadata[ spot.metagenes, ] ) ) ), 2 ), sep=";" ), f )
+					if( length(spot.genes) < 2000 )
+						writeLines( paste( "<r> genes:" ,"", round(mean( cor( t( indata[ spot.genes, ] ) ) ), 2 ), sep=";" ), f )
+					writeLines( "", f )
+					writeLines( paste( "<FC> =", round( mean( indata[spot.genes,m] ), 2 ) )  ,f )
+					writeLines( "", f );	writeLines( "", f );	writeLines( "", f )
+					writeLines( "Gene Statistics", f )
+					writeLines( "", f )
+					write.csv2( out, file=f, row.names=F )
+					
+					close(f)					
+				}	
+	}
+	
+	
+	
+	
+	
+	## Gensets Population Maps	
+
+        if( preferences$geneset.analysis )
+	{
+		cat("Geneset Population Maps\n\n" ); flush.console()
+		
+		dir.create( paste( files.name, "- Results/Geneset Analysis" ), showWarnings=F )
+		
+		for( i in 1:length(gs.def.list) )	
+		{
+			pdf( paste( files.name, " - Results/Geneset Analysis/", substring( make.names( names(gs.def.list)[i]), 1, 100 )," map.pdf", sep="" ), 21/2.54, 21/2.54 )
+					
+			### Population Map ###
+			
+			n.map = matrix(0,preferences$dim.som1,preferences$dim.som1)
+			gs.nodes = som.nodes[  names( gene.ids )[ which( gene.ids %in% gs.def.list[[ i ]]$Genes ) ]  ]
+			n.map[ as.numeric( names(table( gs.nodes )) ) ] = table( gs.nodes )
+			n.map[which(n.map==0)] = NA
+				
+			par( mfrow = c(1,1) );	par( mar=c(5,6,4,5) )
+			image( matrix( (n.map), preferences$dim.som1, preferences$dim.som1 ), main=names(gs.def.list)[i], col=colramp(1000), axes=F, cex.main=2.5 )
+			title(sub=paste( "#genes =", length(gs.def.list[[ i ]]$Genes) ),line=0)
+			box()
+			
+			par(new=T, mar=c(1,0,0,0) );	layout( matrix( c(0,0,0,0,1,0,0,0,0), 3, 3 ), c( 1, 0.05, 0.02 ), c( 0.15, 0.3, 1 ) )
+			image( matrix( 1:100, 1, 100 ), col = colramp(1000), axes=F )
+			axis( 2, at=c(0,1), c( min(n.map,na.rm=T), max(n.map,na.rm=T) ), las=2, tick=F, pos=-0.5 )	
+			box()
+						
+			dev.off()
+		}
+	}
+	
+	
+	
+
+	
+
+	
 
 
 	cat( "HTML Report\n\n" ); flush.console()
@@ -1793,108 +2168,9 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 		<TD>", format(Sys.time(), "%a %b %d %X %Y %Z"), "</TD>
 		</TR>
 	
-		</TABLE><br>", sep="", file = outfile)
-	
-	
-	
-	
-	cat( "<TABLE BORDER=2, WIDTH=90%>
-		<colgroup>
-			<col width=\"50%\">
-			<col width=\"50%\">
-		</colgroup>
-	
-		<TR>
-		<TD>Dimension 1st level SOM:</TD>
-		<TD>", preferences$dim.som1, "x", preferences$dim.som1, "</TD>
-		</TR>
-	
-		<TR>
-		<TD>Dimension 2nd level SOM:</TD>
-		<TD>", preferences$dim.som2, "x", preferences$dim.som2, "</TD>
-		</TR>
-	
-		</TABLE>", sep="", file = outfile)
-	
-	
-	
-	
-	
-	
-	
-	cat( "<H1>Results</H1>
-	
-		<TABLE BORDER=2 , WIDTH=90%>
-		<colgroup>
-			<col width=\"50%\">
-			<col width=\"50%\">
-		</colgroup>
-		<thead><tr>
-			<th colspan=2, BGCOLOR=\"#99CCFF\" >Maps (experiment atlas)</th>
-		</tr>	</thead>
-	
-		
-		<TR>
-		<TD rowspan=5 >These reports show the collection of first level SOM of all tissue samples, supporting maps and the second level SOM. First level SOM are shown with different contrast (log FC-, WAD- and double log-scale).</TD>
-	
-		<TD><a href=\"", files.name, " - Results/Expression Profiles.pdf\" target=\"_blank\">
-			<b>First level SOM expression profiles (FC)</b></a></TD>
-		</TR>
-	
-		<TR>
-		<TD><a href=\"", files.name, " - Results/Expression Profiles alternative.pdf\" target=\"_blank\">
-			First level SOM expression profiles (WAD & loglog)</a></TD>
-		</TR>
-	
-		<TR>
-		<TD><a href=\"", files.name, " - Results/Supporting Maps.pdf\" target=\"_blank\">
-			Supporting Maps</a></TD>
-		</TR>
-	
-		<TR>
-		<TD><a href=\"", files.name, " - Results/2nd level SOM.pdf\" target=\"_blank\">
-			Second level SOM</a></TD>
-		</TR>
-	
 		</TABLE><br>
 	
-	
-	
-	
-	
-		<TABLE BORDER=2, WIDTH=90%>
-		<colgroup>
-			<col width=\"50%\">
-			<col width=\"50%\">
-		</colgroup>
-		<thead><tr>
-			<th colspan=4, BGCOLOR=\"#99CCFF\" >Metagene based analysis</th>
-		</tr>	</thead>
-	
-		
-		<TR>
-		<TD rowspan=5 >Several agglomerative methods based either on distance or on correlation metrics are applied to the samples using filtered subsets of metagenes.
-				The reports show two-way hierarchical clustering heatmaps, pairwise correlation maps, minimum spanning trees and the ICA results.<br></TD>
-	
-		<TD><a href=\"", files.name, " - Results/2nd level distance analysis.pdf\" target=\"_blank\">
-			Distance based methods ( Clustering, Phylogenetic Tree )</a></TD>
-		</TR>
-	
-		<TR>
-		<TD><a href=\"", files.name, " - Results/2nd level correlation analysis.pdf\" target=\"_blank\">
-			Correlation based methods ( MST, PCM )</a></TD>
-		</TR>
-	
-		<TR>
-		<TD><a href=\"", files.name, " - Results/2nd level component analysis.pdf\" target=\"_blank\">
-			Component based methods ( 2d-ICA )</a></TD>
-		</TR>
-	
-	
-		</TABLE><br>
-	
-	
-	
+	 
 	
 	
 		<TABLE BORDER=2, WIDTH=90%>
@@ -1942,15 +2218,55 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	
 	
 	
+		cat( "
+ 			<br>
+			 <H1>Samples</H1>
+			 <TABLE BORDER=2, WIDTH=90%>
+			 <colgroup>
+			 <col width=\"33%\">
+			<col width=\"12%\">
+			<col width=\"15%\">
+			<col width=\"40%\">
+		</colgroup>
+			 <thead>
+			 <tr>
+			 <th>Sample name</th>
+			 <th>Summary Sheets</th>
+			 <th>Global Gene List</th>
+			 <th>Local Gene Lists</th>
+			 </tr>
+			 </thead>", sep="", file = outfile)
+
+	
+	# <TD><a href=\"LPE/", colnames(indata)[m], ".bmp\" target=\"_blank\">BMP</a></TD>
+	for( m in 1:ncol(indata) )
+	{
+		
+		cat( "<TR>
+			<TD>", colnames(indata)[m], "</TD>
+				 <TD><a href=\"", files.name, " - Results/Summary Sheets - Samples/", colnames(indata)[m], ".pdf\" target=\"_blank\">PDF</a></TD>
+			<TD><a href=\"", files.name, " - Results/Gene Lists - Global/", colnames(indata)[m], ".csv\" >CSV</a></TD>
+
+				 <TD>", sep="", file = outfile)
+
+		
+		for( spot.i in 1:length( GS.infos.samples[[m]]$spots ) )
+		{
+			cat( "<a href=\"", files.name, " - Results/Gene Lists - Local/", colnames(indata)[m], ".", spot.i, ".csv\" >CSV ",spot.i,"</a>&nbsp;&nbsp;&nbsp;", sep="", file = outfile)
+			
+		}
+		
+		cat( "</TD></TR>", sep="", file = outfile)
+		
+	}
+	
+
+	
 	cat("	</body> </html> ", sep="", file = outfile)
 	close(outfile)
 	
 	
 	
-	
-	 
-
-
 
 	cat( "Finished:", format(Sys.time(), "%a %b %d %X\n\n" ) )
 	flush.console()

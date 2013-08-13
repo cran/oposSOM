@@ -117,74 +117,91 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	names(gene.descriptions) = rownames(indata)
 	gene.ids = rownames(indata)
 	names(gene.ids) = rownames(indata)
+	unique.protein.ids = unique(gene.ids)
 	gs.def.list = list()
 	preferences$geneset.analysis = F
 	
 	
-	mart = useMart('ensembl')
-	ds = listDatasets(mart)$dataset
-	use.dataset = ""
-	if( length( grep("ENS", rownames(indata)) ) > 0 )
-		for( i in ds )
-		{
-			try({
-				mart<-useDataset( as.character(i),mart=mart)
+	use.dataset = ""	
+	try({
+		mart = useMart('ensembl')
+		ds = listDatasets(mart)$dataset
+		
+		if( length( grep("ENS", rownames(indata)) ) > 0 )
+			for( i in ds )
+			{
+				try({
+					mart<-useDataset( as.character(i),mart=mart)
+		
+					biomart.table = getBM( c("ensembl_gene_id","external_gene_id"), "ensembl_gene_id", rownames(indata)[seq(1,nrow(indata),length.out=100)], mart, checkFilters=F )		
+					if( nrow(biomart.table) != 0 )
+					{
+						use.dataset = as.character(i)		
+						break
+					}
+				}, silent=T )
+			}
+	}, silent=T )
 	
-				biomart.table = getBM( "ensembl_gene_id", "ensembl_gene_id", rownames(indata)[seq(1,nrow(indata),length.out=10)], mart, checkFilters=F )		
-				if( nrow(biomart.table) != 0 )
-				{
-					use.dataset = as.character(i)		
-					break
-				}
-			}, silent=T )
-		}
+	
 	if( use.dataset == "" )
 	{		
 		cat("Could not download GO annotation. Gene set analysis will not be performed.\n\n")		
 	} else
 	{
+		biomart.table = matrix(0,0,0)
+		try({
+			biomart.table = getBM( c( "ensembl_gene_id", "external_gene_id", "description", "ensembl_gene_id", "chromosome_name","band" ) , "ensembl_gene_id", rownames(indata), mart, checkFilters=F )
+		}, silent=T )
 		
-		biomart.table = getBM( c( "ensembl_gene_id", "external_gene_id", "description", "ensembl_gene_id", "chromosome_name","band" ) , "ensembl_gene_id", rownames(indata), mart, checkFilters=F )
+		if( nrow(biomart.table) > 0 )
+		{		
+			h = biomart.table[,2]
+			names(h) = biomart.table[,1]
+			gene.names[ as.character( unique(biomart.table[,1]) ) ] = h[ as.character( unique(biomart.table[,1]) ) ]
+				
+			h = biomart.table[,3]
+			names(h) = biomart.table[,1]
+			gene.descriptions[ as.character( unique(biomart.table[,1]) ) ] = h[ as.character( unique(biomart.table[,1]) ) ]							
+		}	
 		
-		h = biomart.table[,2]
-		names(h) = biomart.table[,1]
-		gene.names[ as.character( unique(biomart.table[,1]) ) ] = h[ as.character( unique(biomart.table[,1]) ) ]
+		
+		biomart.table = matrix(0,0,0)
+		try({	
+			biomart.table = getBM( c( "ensembl_gene_id", "go_id", "name_1006", "namespace_1003" ) , "ensembl_gene_id", unique.protein.ids, mart, checkFilters=F )
+		}, silent=T )
+		
+		if( nrow(biomart.table) > 0 )
+		{	
+			gs.def.list = tapply( biomart.table[,1], biomart.table[,3], c  )
+			gs.def.list = lapply( gs.def.list, function(x){ list( Genes=x, Type="" ) } )
 			
-		h = biomart.table[,3]
-		names(h) = biomart.table[,1]
-		gene.descriptions[ as.character( unique(biomart.table[,1]) ) ] = h[ as.character( unique(biomart.table[,1]) ) ]
-						
-		
-		
-		unique.protein.ids = unique(gene.ids)
-		
-		biomart.table = getBM( c( "ensembl_gene_id", "go_id", "name_1006", "namespace_1003" ) , "ensembl_gene_id", unique.protein.ids, mart, checkFilters=F )
-		gs.def.list = tapply( biomart.table[,1], biomart.table[,3], c  )
-		gs.def.list = lapply( gs.def.list, function(x){ list( Genes=x, Type="" ) } )
-		
-		gs.def.list = gs.def.list[ - which( names(gs.def.list) == "" ) ]
-		gs.def.list = gs.def.list[ - which( sapply( sapply( gs.def.list, head, 1 ), length ) < 10 ) ]	
-		
-		gs.def.list = gs.def.list[ order( names( gs.def.list ) ) ]
-		
-		gs.def.list = lapply( gs.def.list, function(x)
-		{ 
-			x$Genes = intersect( x$Genes, unique.protein.ids )	
-			return(x)
-		} )
-	
-		empty.gs = which( sapply( sapply( gs.def.list, head, 1 ), length ) == 0 )
-		if( length(empty.gs) > 0 )
-		{
-			gs.def.list = gs.def.list[ - empty.gs ]
-		}
-	
-		if( length(gs.def.list) > 0 )
-		{                                             	
-			preferences$geneset.analysis = T
-			cat( "Download of", length(gs.def.list), "GO sets using",use.dataset,"\n\n" ); flush.console()
+			gs.def.list = gs.def.list[ - which( names(gs.def.list) == "" ) ]
+			gs.def.list = gs.def.list[ - which( sapply( sapply( gs.def.list, head, 1 ), length ) < 10 ) ]	
 			
-		} else
+			gs.def.list = gs.def.list[ order( names( gs.def.list ) ) ]
+			
+			gs.def.list = lapply( gs.def.list, function(x)
+			{ 
+				x$Genes = intersect( x$Genes, unique.protein.ids )	
+				return(x)
+			} )
+	
+			empty.gs = which( sapply( sapply( gs.def.list, head, 1 ), length ) == 0 )
+			if( length(empty.gs) > 0 )
+			{
+				gs.def.list = gs.def.list[ - empty.gs ]
+			}
+		
+			if( length(gs.def.list) > 0 )
+			{                                             	
+				preferences$geneset.analysis = T
+				cat( "Download of", length(gs.def.list), "GO sets using",use.dataset,"\n\n" ); flush.console()
+			} 
+			
+		}	
+		
+		if( length(gs.def.list) == 0 )
 		{
 			cat("Could not download GO annotation. Gene set analysis will not be performed.\n\n")
 		}		
@@ -1361,15 +1378,15 @@ run.pipeline = function( indata=NULL, dataset.name = "Unnamed", dim.som1 = 20, d
 	
 	
 	
-			if( ncol(metadata) > 2 )
-			{	
-				phylo.tree = nj( dist( t( s ) ) )
-				phylo.tree$tip.label = colnames(indata)
-			
-				plot.phylo( phylo.tree, "unrooted", cex=0.5, tip.color=group.colors )
-					title(filter.list[[i]]$n)
-					box()
-			}
+# 			if( ncol(metadata) > 2 )
+# 			{	
+# 				phylo.tree = nj( dist( t( s ) ) )
+# 				phylo.tree$tip.label = colnames(indata)
+# 			
+# 				plot.phylo( phylo.tree, "unrooted", cex=0.5, tip.color=group.colors )
+# 					title(filter.list[[i]]$n)
+# 					box()
+# 			}
 	
 	
 		}

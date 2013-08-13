@@ -13,8 +13,8 @@ Additionally, a HTML summary file is created collating and linking all analysis 
 \tabular{ll}{
 Package: \tab oposSOM\cr
 Type: \tab Package\cr
-Version: \tab 0.2-2\cr
-Date: \tab 2012-10-17\cr
+Version: \tab 0.2-3\cr
+Date: \tab 2013-08-13\cr
 License: \tab GPL (>= 2)\cr
 LazyLoad: \tab yes\cr
 }
